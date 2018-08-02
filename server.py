@@ -15,7 +15,6 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         self.write_message(json.dumps(data))
 
     def open(self):
-        global master_socket
         print("New client connected")
         self.send({'status':'CONNECTED'})
 
@@ -29,17 +28,20 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
                 print("NEW MASTER ASSIGNED")
                 master_socket = self
             elif message['role'] == "slave":
+                slave_sockets.append(self)
                 print("NEW SLAVE ASSIGNED")
                 try:
                     master_socket.send(message)
                 except:
                     print("NO MASTER FOUND")
-                slave_sockets.append(self)
         elif 'command' in message:
             if master_socket != self:
                 self.send({'error':'INSUFFICIENT PERMISSIONS'})
             for slave in slave_sockets:
                 slave.send(message)
+        elif 'result' in message:
+            master_socket.send(message)
+            return
         self.send(message)
 
     def on_close(self):

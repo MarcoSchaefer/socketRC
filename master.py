@@ -1,23 +1,25 @@
 from websocket import create_connection
 import time
 import json
+import threading
 
+def receive():
+    global ws
+    data = ws.recv()
+    result = json.loads(data)
+    if 'result' in result:
+        print(result['result'])
+    else:
+        print(result)
+    receive()
 
 def send(data):
     global ws
     ws.send(json.dumps(data))
     return
 
-
-def receive():
-    global ws
-    data = ws.recv()
-    return json.loads(data)
-
-
-ws = create_connection("ws://localhost:8000")
-
-
-result = receive()
+ws = create_connection("ws://192.168.0.2:8000")
 send({'role': 'master'})
-result = receive()
+
+receiverThread = threading.Thread(target=receive)
+receiverThread.start()
