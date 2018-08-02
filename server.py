@@ -1,45 +1,55 @@
-import socketio
-import eventlet
-import eventlet.wsgi
-from flask import Flask, render_template
-import logging
+#!/usr/bin/python
 
-sio = socketio.Server()
-app = Flask(__name__)
+import tornado.web
+import tornado.websocket
+import tornado.ioloop
+import json
 
-@sio.on('connect')
-def connect(sid, environ):
-    print("CONNECTED: ", sid)
+master_socket = False
+slave_sockets = []
 
-@sio.on('connect', namespace='/control')
-def connect(sid, environ):
-    #sio.emit('reply','some data here')
-    #sio.emit('reply','some data here', room=sid)
-    print("CONNECTED: ", sid)
-    return True
 
-@sio.on('root', namespace='/')
-def Ping(sid, data):
-    print("ROOT: ", data)
-    return sio.emit('root',{'data':'RESPONSE FROM SERVER'}, room=sid)
-    #sio.emit('root',{'data':'RESPONSE FROM SERVER'}, room=sid)
-    #sio.emit('root',{'data':'RESPONSE FROM SERVER'}, room=sid)
+class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
-@sio.on('ping', namespace='/control')
-def Ping(sid, data):
-    print("CONTROL: ", data)
-    sio.emit('reply','LUL')
-    sio.emit('reply','AAA', room=sid)
-    sio.emit('ping','some data here', room=sid)
-    sio.emit('ping', 'pong', namespace='/control')
+    def send(self,data):
+        self.write_message(json.dumps(data))
 
-@sio.on('disconnect', namespace='/chat')
-def disconnect(sid):
-    print('disconnect ', sid)
+    def open(self):
+        global master_socket
+        print("New client connected")
+        self.send({'status':'CONNECTED'})
 
-if __name__ == '__main__':
-    # wrap Flask application with engineio's middleware
-    app = socketio.Middleware(sio, app)
+    def on_message(self, data):
+        global master_socket
+        global slave_sockets
+        print("RECEIVED: " + data)
+        message = json.loads(data)
+        if 'role' in message:
+            if message['role'] == "master":
+                print("NEW MASTER ASSIGNED")
+                master_socket = self
+            elif message['role'] == "slave":
+                print("NEW SLAVE ASSIGNED")
+                try:
+                    master_socket.send(message)
+                except:
+                    print("NO MASTER FOUND")
+                slave_sockets.append(self)
+        elif 'command' in message:
+            if master_socket != self:
+                self.send({'error':'INSUFFICIENT PERMISSIONS'})
+            for slave in slave_sockets:
+                slave.send(message)
+        self.send(message)
 
-    # deploy as an eventlet WSGI server
-    eventlet.wsgi.server(eventlet.listen(('', 8000)), app)
+    def on_close(self):
+        print("Client disconnected")
+
+
+application = tornado.web.Application([
+    (r"/", WebSocketHandler),
+])
+
+if __name__ == "__main__":
+    application.listen(8000)
+    tornado.ioloop.IOLoop.instance().start()
