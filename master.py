@@ -5,7 +5,7 @@ import threading
 import requests
 
 def receive():
-    while:
+    while True:
         global ws
         data = ws.recv()
         result = json.loads(data)
