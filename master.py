@@ -5,14 +5,14 @@ import threading
 import requests
 
 def receive():
-    global ws
-    data = ws.recv()
-    result = json.loads(data)
-    if 'result' in result:
-        print(result['result'])
-    else:
-        print(result)
-    receive()
+    while:
+        global ws
+        data = ws.recv()
+        result = json.loads(data)
+        if 'result' in result:
+            print(result['result'])
+        else:
+            print(result)
 
 def send(data):
     global ws

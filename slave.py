@@ -15,14 +15,14 @@ def send(data):
 
 
 def receive():
-    global ws
-    data = ws.recv()
-    result = json.loads(data)
-    print(result)
-    if 'command' in result:
-        executerThread = threading.Thread(target=execute, args=(result['command'],))
-        executerThread.start()
-    receive()
+    while:
+        global ws
+        data = ws.recv()
+        result = json.loads(data)
+        print(result)
+        if 'command' in result:
+            executerThread = threading.Thread(target=execute, args=(result['command'],))
+            executerThread.start()
 
 
 def execute(command):
