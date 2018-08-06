@@ -2,6 +2,7 @@ from websocket import create_connection
 import time
 import json
 import threading
+import requests
 
 def receive():
     global ws

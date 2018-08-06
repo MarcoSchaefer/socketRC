@@ -4,9 +4,37 @@ import tornado.web
 import tornado.websocket
 import tornado.ioloop
 import json
+import requests
 
-master_socket = False
+
+import logging
+logging.getLogger('requests').setLevel(logging.WARNING)
+logging.basicConfig(level=logging.DEBUG)
+
+
+master_sockets = []
 slave_sockets = []
+
+
+def MasterHandler(socket, message):
+    global master_sockets
+    global slave_sockets
+    if 'command' in message:
+        if socket not in master_sockets:
+            socket.send({'error':'INSUFFICIENT PERMISSIONS'})
+            return
+        else:
+            for slave in slave_sockets:
+                slave.send(message)
+
+def SlaveHandler(socket, message):
+    global master_sockets
+    global slave_sockets
+    if 'result' in message:
+        for master in master_sockets:
+            master.send(message)
+        return
+
 
 
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
@@ -19,32 +47,42 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         self.send({'status':'CONNECTED'})
 
     def on_message(self, data):
-        global master_socket
+        global master_sockets
         global slave_sockets
         print("RECEIVED: " + data)
         message = json.loads(data)
         if 'role' in message:
             if message['role'] == "master":
                 print("NEW MASTER ASSIGNED")
-                master_socket = self
+                if self not in master_sockets:
+                    master_sockets.append(self)
+                if self in slave_sockets:
+                    slave_sockets.remove(self)
             elif message['role'] == "slave":
-                slave_sockets.append(self)
+                if self not in slave_sockets:
+                    slave_sockets.append(self)
+                if self in master_sockets:
+                    master_sockets.remove(self)
                 print("NEW SLAVE ASSIGNED")
                 try:
-                    master_socket.send(message)
+                    for master in master_sockets:
+                        master.send({'slave': self.request.remote_ip})
                 except:
                     print("NO MASTER FOUND")
-        elif 'command' in message:
-            if master_socket != self:
-                self.send({'error':'INSUFFICIENT PERMISSIONS'})
-            for slave in slave_sockets:
-                slave.send(message)
-        elif 'result' in message:
-            master_socket.send(message)
-            return
-        self.send(message)
+        if self in master_sockets:
+            MasterHandler(self,message)
+        elif self in slave_sockets:
+            SlaveHandler(self,message)
 
     def on_close(self):
+        try:
+            slave_sockets.remove(self)
+        except:
+            pass
+        try:
+            master_sockets.remove(self)
+        except:
+            pass
         print("Client disconnected")
 
 
