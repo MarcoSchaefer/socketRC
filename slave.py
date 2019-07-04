@@ -5,7 +5,7 @@ import subprocess
 import requests
 import threading
 
-ws = create_connection("ws://192.168.0.2:8000")
+ws = create_connection("ws://localhost:8000")
 
 
 def send(data):

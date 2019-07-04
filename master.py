@@ -19,7 +19,7 @@ def send(data):
     ws.send(json.dumps(data))
     return
 
-ws = create_connection("ws://192.168.0.2:8000")
+ws = create_connection("ws://localhost:8000")
 send({'role': 'master'})
 
 receiverThread = threading.Thread(target=receive)
