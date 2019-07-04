@@ -3,6 +3,7 @@ import time
 import json
 import threading
 import requests
+import sys
 
 def receive():
     while True:
@@ -19,8 +20,16 @@ def send(data):
     ws.send(json.dumps(data))
     return
 
-ws = create_connection("ws://localhost:8000")
+ip = sys.argv[1]
+port = sys.argv[2]
+ws = create_connection("ws://"+ip+":"+port)
 send({'role': 'master'})
 
 receiverThread = threading.Thread(target=receive)
 receiverThread.start()
+
+
+while True:
+  command = input()
+  payload = {'command': command}
+  send(payload)
