@@ -4,8 +4,11 @@ import json
 import subprocess
 import requests
 import threading
+import sys
 
-ws = create_connection("ws://localhost:8000")
+ip = sys.argv[1]
+port = sys.argv[2]
+ws = create_connection("ws://"+ip+":"+port)
 
 
 def send(data):
